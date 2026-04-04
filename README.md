@@ -1,3 +1,5 @@
+Here is a timeline of things I did to get my home lab up and running, along with any problems I ran into and their solutions.
+
 # Hardware Setup
 
 - Installed a spare SSD into my desktop system to dedicate to Proxmox installation.
