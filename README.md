@@ -1,183 +1,268 @@
-Here is a timeline of things I did to get my home lab up and running, along with any problems I ran into and their solutions.
+# Home Lab Build Log
 
-# Hardware Setup
+A running log of setup steps, configurations, and troubleshooting notes for a self-hosted home lab built on Proxmox VE, with Security Onion for network monitoring, WireGuard and Tailscale for remote access, and Wake-on-LAN for remote power management.
 
-- Installed a spare SSD into my desktop system to dedicate to Proxmox installation.
+---
 
-- Ensured the system BIOS recognized the SSD and set the appropriate boot order.
+## Table of Contents
 
-  - Required careful handling to avoid overwriting existing data on my main SSD.
+1. [Hardware Setup](#1-hardware-setup)
+2. [Proxmox Installation](#2-proxmox-installation)
+3. [Virtual Machine Creation](#3-virtual-machine-creation)
+4. [Security Onion & NIC Configuration](#4-security-onion--nic-configuration)
+5. [Security Onion Console Dashboard Access](#5-security-onion-console-dashboard-access)
+6. [Adding Security Onion Endpoints](#6-adding-security-onion-endpoints)
+7. [WireGuard VPN Deployment & Secure Configuration](#7-wireguard-vpn-deployment--secure-configuration)
+8. [Tailscale VPN Deployment & Network Integration](#8-tailscale-vpn-deployment--network-integration)
+9. [Contingency Planning](#9-contingency-planning)
 
+---
 
-# Proxmox Installation
+## 1. Hardware Setup
 
-- Installed Proxmox Virtual Environment (VE) on the dedicated SSD.
+- Installed a spare SSD into the desktop system to dedicate to the Proxmox installation.
+- Confirmed the system BIOS recognized the new SSD and updated the boot order accordingly.
 
-- Configured VM network interfaces and checked IP addresses, gateways, and routing using `ip a/route`
+> **Note:** Care was taken to avoid overwriting data on the existing primary SSD during this process.
 
-- Encountered failed `apt-get update` after installation due to Linux package management errors from unauthorized IP access and unsigned repository metadata
+---
 
-  - Disabled the paid enterprise source repo and added a custom source list for the no-subscription repo instead
+## 2. Proxmox Installation
 
-    - `echo "deb http://proxmox.com trixie pve-no-subscription" > /etc/apt/sources.list.d/pve-no-sub.list`
+- Installed Proxmox VE on the dedicated SSD.
+- After booting into Proxmox, verified network interface configuration, IP addresses, gateways, and routing:
 
+```bash
+ip a
+ip route
+```
 
+### Issue: `apt-get update` Failed After Installation
 
-# Virtual Machine Creation
+**Cause:** By default, Proxmox points to the enterprise subscription repository. Without a valid subscription key, requests are rejected with an authentication error, and the repository metadata is unsigned, causing `apt` to refuse it.
 
-- Created three virtual machines (VMs) in Proxmox, including Kali, Ubuntu, and Security Onion.
+**Fix:** Disabled the enterprise repo and added the no-subscription community repository:
 
-- Allocated CPU cores and RAM based on VM requirements (1–2 cores per VM, 8GB-16GB ram each).
+```bash
+# Comment out or remove the enterprise repo entry:
+# /etc/apt/sources.list.d/pve-enterprise.list
 
-- Encountered vncproxy errors when attempting to launch VMs.
+# Add the no-subscription repo
+echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > /etc/apt/sources.list.d/pve-no-sub.list
+```
 
-  - Resolved by adjusting the video adapter to Standard VGA with `qm set 102 --vga std`
+> **Note:** The original config used `trixie`, which is the codename for Debian 13 (testing). Use `bookworm` (Debian 12) unless intentionally running a testing branch.
 
+---
 
+## 3. Virtual Machine Creation
 
-# Security Onion and Network Interface Card configurations
+- Created three VMs in Proxmox: Kali Linux, Ubuntu, and Security Onion.
+- Allocated resources per VM based on requirements:
+  - CPU: 1–2 cores
+  - RAM: 8–16 GB
 
-- Added two VirtIO NICs for my Security Onion VM: one for management, one for monitoring/sniffing traffic.
+### Issue: VNC Proxy Errors When Launching VMs
 
-- Management NIC connected to main Proxmox bridge `vmbr0` for network access.
+**Cause:** Some display adapter types are incompatible with the noVNC console in certain Proxmox configurations.
 
-- Monitoring NIC connected to the same bridge to capture traffic from other VMs.
+**Fix:** Set the display adapter to Standard VGA for the affected VM (replace `102` with the correct VM ID):
 
-- Installer displayed warning: “The IP being routed by Linux is not the IP assigned to the management interface.”
+```bash
+qm set 102 --vga std
+```
 
-  - Resolved by manually assigning a static IP to the management NIC `ens19` and leaving monitoring NIC (ens18) without an IP:
+---
 
-    - `sudo ip addr add 192.168.0.150/24 dev ens18`
+## 4. Security Onion & NIC Configuration
 
-    - `sudo ip link set ens18 up`
+Two VirtIO NICs were added to the Security Onion VM, following Security Onion's recommended deployment architecture:
 
-    - `sudo ip route add default via 192.168.0.1`
+- **Management NIC (`ens19`)** — connected to the main Proxmox bridge `vmbr0` for administrative access and internet connectivity. This interface is assigned a static IP.
+- **Monitoring NIC (`ens18`)** — connected to the same bridge in promiscuous mode to passively capture traffic from other VMs. This interface intentionally has no IP address assigned.
 
+### Issue: Installer Warning — IP Routing Mismatch
 
+**Message:** *"The IP being routed by Linux is not the IP assigned to the management interface."*
 
-# Security Onion Console Dashboard Access
+**Cause:** The installer detected that the default route was associated with the wrong interface. This can occur when both NICs are active during installation but the routing table points to the interface that should remain unaddressed.
 
-- After a successful installation of Security Onion, I had trouble accessing the SOC. I fixed this after much testing.
+**Fix:** Manually assigned a static IP to the management NIC (`ens19`) and confirmed the monitoring NIC (`ens18`) remained without an IP:
 
-  - Checked that all Security Onion services were running correctly.
+```bash
+sudo ip addr add 192.168.x.x/24 dev ens19
+sudo ip link set ens19 up
+sudo ip route add default via 192.168.x.1
+```
 
-    - `sudo so-status`
+---
 
-  - Verified that required ports were listening to confirm web services were active.
+## 5. Security Onion Console Dashboard Access
 
-    - `sudo ss -tulnp grep | 443`
+After installation completed, the SOC web dashboard was not reachable from the browser. The following steps were used to diagnose and resolve the issue.
 
-  - Inspected firewall rules with iptables to ensure no traffic was being blocked.
+**Verify all Security Onion services are running:**
 
-    - `sudo iptables -L | less`
+```bash
+sudo so-status
+```
 
-  - Tested dashboard access using curl and confirmed HTTP/HTTPS responses.
+**Check that required ports are listening (confirms the web service is up):**
 
-    - `curl -kL https://192.168.0.150/`
+```bash
+sudo ss -tulnp | grep 443
+```
 
-  - Identified that browser access was blocked due to firewall restrictions.
+**Review iptables rules for anything blocking inbound traffic:**
 
-    - Whitelisted my machines through the firewall to allow SOC dashboard access.
+```bash
+sudo iptables -L | less
+```
 
-      - `sudo so-firewall includehost analyst 192.168.0.x`
+**Test HTTPS reachability directly from the Security Onion host:**
 
-- Ensured the functionality of Security Onion services by creating and triggering detections in the dashboard.
+```bash
+curl -kL https://192.168.x.x/
+```
 
-  - Wrote my own Sigma rule to detect when nmap scans are used to scan the endpoints and successfully triggered it by running an `nmap` scan.
+### Issue: Browser Access Blocked by Firewall
 
+**Cause:** Security Onion's built-in firewall (`so-firewall`) restricts dashboard access to explicitly authorized hosts by default. Analyst machines must be whitelisted before they can reach the console.
 
+**Fix:** Added the analyst machine to the allowed hostgroup:
 
-# Adding Security Onion Endpoints
+```bash
+sudo so-firewall includehost analyst 192.168.x.x
+```
 
-- My elastic agent installer was not working, and the log file described that the connectivity failed to Fleet Host.
+### Validation
 
-  - Configured firewall hostgroups within the Security Onion framework to authorize specific subnets, ensuring secure and reliable log ingestion.
+To confirm the detection pipeline was working end-to-end, a custom Sigma rule was written to detect `nmap` port scans against monitored endpoints. Triggering it with a live `nmap` scan confirmed alerts were firing correctly in the dashboard.
 
-- Managed Elastic Fleet server configurations to ensure endpoint agents could successfully enroll and communicate over required TCP ports.
+---
 
-  - `curl -k https://192.168.0.150:8220`
+## 6. Adding Security Onion Endpoints
 
-- Validating successful data flow into the centralized management interface and identifying agent hostnames.
+### Issue: Elastic Agent Installer Failed — Fleet Host Connectivity Error
 
+**Cause:** The Elastic Agent on the endpoint could not reach the Fleet server because Security Onion's firewall did not include the endpoint's subnet in an authorized hostgroup.
 
+**Fix:** Configured the appropriate firewall hostgroups within Security Onion to permit inbound traffic from the endpoint subnets, enabling reliable log ingestion.
 
-# WireGuard VPN Deployment \& Secure Configuration
+Elastic Fleet server connectivity can be verified independently:
 
-- Installed WireGuard on a Debian XLS container; wrote config file for `wg0.conf` with internal VPN subnet `10.0.0.1/24`.
+```bash
+curl -k https://192.168.x.x:8220
+```
 
-- Applied preshared keys in `[Peer]` sections to ensure cryptographic integrity.
+After agents enrolled successfully, hostnames appeared in the Fleet management interface and data began flowing into Security Onion's dashboards.
 
-- Implemented firewall rules restricting VPN traffic to only required hosts and ports by the concept of least privilege
+---
 
-  - `iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT`
+## 7. WireGuard VPN Deployment & Secure Configuration
 
-  - `iptables -A FORWARD -i wg0 -d 192.168.0.58 -p tcp --dport 8006 -j ACCEPT`
+- Installed WireGuard on a Debian LXC container in Proxmox.
+- Configured `wg0.conf` with an internal VPN subnet of `10.0.0.1/24`.
+- Added preshared keys in each `[Peer]` block for an additional layer of symmetric cryptographic authentication on top of the standard public-key exchange.
+- Applied iptables rules following a least-privilege model — VPN clients are only forwarded to specific internal hosts and ports, with all other traffic rejected:
 
-  - `iptables -A FORWARD -i wg0 -d 192.168.0.150 -j ACCEPT`
+```bash
+# Allow return traffic for established sessions
+iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-  - `iptables -A FORWARD -i wg0 -j REJECT`
+# Allow VPN clients to reach Proxmox web UI (port 8006)
+iptables -A FORWARD -i wg0 -d 192.168.x.x -p tcp --dport 8006 -j ACCEPT
 
-  - `iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE`
+# Allow VPN clients to reach Security Onion
+iptables -A FORWARD -i wg0 -d 192.168.x.x -j ACCEPT
 
-- Traffic not received by VPN client
+# Reject all other forwarded VPN traffic
+iptables -A FORWARD -i wg0 -j REJECT
 
-  - Verified MTU (1420) and NAT configuration; adjusted forwarding rules.
+# Masquerade outbound traffic through the container's Ethernet interface
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+```
 
-- Ensured IP forwarding enabled; monitored UDP GRO warnings, and confirmed stability of tunnel.
+### Issue: Traffic Not Received by VPN Client
 
-  - `echo "net.ipv4.ip\_forward=1" >> /etc/sysctl.conf`
+**Fix:** Verified the MTU was set to `1420` (standard for WireGuard over typical Ethernet), confirmed NAT was applied correctly, and adjusted forwarding rules. Also ensured IP forwarding was enabled at the kernel level, which is required for the container to route packets between interfaces:
 
-  - `echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf`
+```bash
+echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
+sysctl -p
+```
 
-- Unable to forward ports externally; confirmed VPN still allowed internal routing through container and LAN.
+### Issue: Unable to Forward Ports Externally
 
-  - Pivoted to using Tailscale to bypass the need for port forwarding
+The WireGuard setup required inbound port forwarding from the internet to the LAN, which was not available due to ISP or router restrictions. WireGuard continued to work for internal routing through the container, but could not be reached from outside the network. This led to adopting Tailscale, which uses NAT traversal and does not require port forwarding.
 
+---
 
+## 8. Tailscale VPN Deployment & Network Integration
 
-# Tailscale VPN Deployment \& Network Integration
+- Provisioned a Debian LXC container in Proxmox with a non-root user and unnecessary services disabled.
+- Installed Tailscale, authenticated via the CLI, and confirmed the node appeared in the Tailscale admin console.
+- Verified key expiry settings and device authorization, then advertised the local subnet to allow access to all LAN hosts through the Tailscale node:
 
-- Created a secure Debian container in Proxmox VE.
+```bash
+tailscale up --advertise-routes=192.168.0.0/24
+```
 
-  - applied least-privilege access by creating a non-root user and disabling unnecessary services.
+> **Note:** Subnet route advertisement must also be approved in the Tailscale admin console before other nodes will accept the routes.
 
-- Installed Tailscale on Debian container, authenticated via CLI, and verified node connectivity.
+- Confirmed that enrolled endpoints could reach internal LAN resources via the advertised routes.
+- Enabled the Tailscale daemon to persist across reboots:
 
-- Monitored key expiry and ensured device authorization before enabling routes
+```bash
+systemctl enable tailscaled
+```
 
-  - `tailscale up --advertise-routes=192.168.0.0/24`
+**Outcome:** This provided secure remote access to the Proxmox host, VMs, and Security Onion console from any Tailscale-enrolled device, without exposing services to the internet or requiring port forwarding.
 
-- Confirmed laptop and other endpoints added to Tailscale network; ensured persistent Tailscale service post-reboot.
+---
 
-  - `systemctl enable tailscaled`
+## 9. Contingency Planning
 
-- Achieved secure remote access to Proxmox host, VMs, and the Security Onion Console internally without exposing services directly to the internet.
+The goal was to be able to fully access and power on the home lab remotely — including when the Proxmox host was completely powered off.
 
+The solution uses a low-power laptop left running on the local network as a relay. From a remote machine, the workflow is: connect to the laptop over Tailscale via SSH, then send a Wake-on-LAN (WoL) magic packet from the laptop to the Proxmox host's MAC address.
 
+- Built a custom PowerShell script on the relay laptop to send the WoL magic packet to the Proxmox host.
+- Made BIOS/UEFI power management adjustments and tuned the NIC using `ethtool` to ensure WoL was functional at the hardware level.
+- All configurations were made persistent via config files rather than runtime commands, and the VPN container was set to start on boot.
 
-# Contingency planning
+### Issue: WoL Settings Reset on Every Shutdown
 
-- Engineered a secure, multi-stage solution to remotely power on a Proxmox server via the internet using a low-power laptop as a local network relay.
+**Cause:** The WoL flag on the NIC was not being preserved across power cycles.
 
-  - Developed and deployed a custom PowerShell "Magic Packet" sender on Windows to trigger hardware wake-up events on Proxmox host.
+**Fix:** Added a `post-up` directive to `/etc/network/interfaces` to re-apply the `wol g` flag each time the interface came up:
 
-  - Performed BIOS/UEFI power management adjustments and Linux kernel-level network interface tuning `ethtool`.
+```
+# In /etc/network/interfaces
+post-up /sbin/ethtool -s eth0 wol g
+```
 
-- Ensured system configurations were permanent by editing config files rather than temporary bypasses; enabled the VPN container to start on boot.
+### Issue: Magic Packets Sent but Proxmox Host Did Not Power On
 
-- The Proxmox PC would lose its Wake-on-LAN settings every time it shut down.
+**Cause:** The motherboard's `ErP Ready` (Energy-Related Products) and `Deep Sleep` settings were cutting power to the NIC while the system was off, preventing it from listening for WoL packets.
 
-  - Modified `/etc/network/interface`s with `post-up`  to force the `wol g` flag to remain active on every boot.
+**Fix:** Disabled `ErP Ready` and `Deep Sleep` in the BIOS.
 
-- My laptop relay was sending packets, but the Proxmox PC stayed off due to power-saving features.
+### Issue: PowerShell Wake Script Blocked When Run Remotely via SSH
 
-  - Disabled `ErP Ready` and `Deep Sleep` in the BIOS to keep the network card powered while the system was off.
+**Cause:** Windows enforces a script execution policy that blocks unsigned scripts by default, including when invoked remotely over SSH.
 
-- Attempted passwordless SSH for "one-click" ease
+**Fix:** Passed `-ExecutionPolicy Bypass` in the remote SSH command to allow the script to run for that session only, without modifying the system-wide execution policy:
 
-  - Chose to retain standard SSH authentication (password-based) to ensure every remote wake event requires manual authorization.
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\wake.ps1
+```
 
-- Windows blocked the custom wake script from running remotely via SSH.
+### Security Note — No Passwordless SSH
 
-  - Implemented an `-ExecutionPolicy Bypass` flag in the remote command string to allow the automation to run without lowering global system security.
+Passwordless SSH (key-based auth without a passphrase) was considered for convenience but not implemented. Standard password authentication was retained so that every remote wake event requires a deliberate manual action, reducing the risk of unauthorized access if a client device is compromised.
 
+---
+
+*Last updated: 2026*
