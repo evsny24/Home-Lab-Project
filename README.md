@@ -1,5 +1,10 @@
 A running log of setup steps, configurations, and troubleshooting notes for a self-hosted home lab built on Proxmox VE, with Security Onion for network monitoring, WireGuard and Tailscale for remote access, and Wake-on-LAN for remote power management.
 
+## Security & Privacy Notice
+
+All IP addresses, MAC addresses, and identifying details have been sanitized. 
+This repository is intended for educational and demonstration purposes only.
+
 ---
 
 ## Table of Contents
@@ -226,7 +231,7 @@ The WireGuard setup required inbound port forwarding from the internet to the LA
 - Verified key expiry settings and device authorization, then advertised the local subnet to allow access to all LAN hosts through the Tailscale node:
 
 ```bash
-tailscale up --advertise-routes=192.168.0.0/24
+tailscale up --advertise-routes=192.168.x.0/24
 ```
 
 > **Note:** Subnet route advertisement must also be approved in the Tailscale admin console before other nodes will accept the routes.
