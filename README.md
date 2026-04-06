@@ -251,7 +251,7 @@ systemctl enable tailscaled
 
 ## 9. Contingency Planning
 
-The goal was to be able to power the lab on and off completely remotely since leaving the lab running 24/7 consumed too much power and would wear down components that need to be used for other purposes. Turning off the host is a feature built-in to the Proxmox GUI, but powering my lab back on was the problem.
+The goal was to be able to power the lab on and off completely remotely since leaving the lab running 24/7 consumed too much power and would wear down components that need to be used for other purposes. Turning off the host is a feature built-in to the Proxmox GUI, but powering the lab back on was the problem.
 
 The solution uses a low-power laptop left running on the local network as a relay. From a remote machine, the workflow is: connect to the laptop over Tailscale via SSH, then send a Wake-on-LAN (WoL) magic packet from the laptop to the Proxmox host's MAC address.
 
