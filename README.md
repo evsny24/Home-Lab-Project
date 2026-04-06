@@ -195,7 +195,7 @@ sysctl -p
 
 ### Issue: Unable to Forward Ports Externally
 
-The WireGuard setup required inbound port forwarding from the internet to the LAN, which was not available due to ISP or router restrictions. WireGuard continued to work for internal routing through the container, but could not be reached from outside the network. This led to adopting Tailscale, which uses NAT traversal and does not require port forwarding.
+The WireGuard setup required inbound port forwarding from the internet to the LAN, which was not available due to router restrictions. WireGuard continued to work for internal routing through the container, but could not be reached from outside the network. This led to adopting Tailscale, which uses NAT traversal and does not require port forwarding.
 
 ---
 
