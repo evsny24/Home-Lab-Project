@@ -179,7 +179,7 @@ curl -k https://192.168.x.x:8220
 
 After agents enrolled successfully, hostnames appeared in the Fleet management interface and data began flowing into Security Onion's dashboards.
 
-<img height="75%" width="75%" alt="fleet" src="Pictures/16_fleet.png" />
+<img height="75%" width="75%" alt="fleet" src="Pictures/fleet.png" />
 
 ---
 
