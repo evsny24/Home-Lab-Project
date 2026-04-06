@@ -297,4 +297,4 @@ Passwordless SSH (key-based auth without a passphrase) was considered for conven
 
 ---
 
-*Last updated: April 2026, Written by Evan S, and Edited and formatted by Claude Code*
+*Last updated: April 2026; Edited and formatted by Claude Code*
