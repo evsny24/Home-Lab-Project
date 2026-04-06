@@ -28,7 +28,7 @@ This repository is intended for educational and demonstration purposes only.
 
 > **Note:** Care was taken to avoid overwriting data on the existing primary SSD during this process.
 
-<img height="45%" width="45%" alt="Flashing ISO file" src="Pictures/02_flashing_ISO.PNG" />
+<img height="45%" width="45%" alt="Flashing ISO file" src="Pictures/flashing_ISO.PNG" />
 
 ---
 
@@ -42,7 +42,7 @@ ip a
 ip route
 ```
 
-<img height="65%" width="65%" alt="Installed Proxmox" src="Pictures/03_welcome_to_proxmox.png" />
+<img height="65%" width="65%" alt="Installed Proxmox" src="Pictures/welcome_to_proxmox.png" />
 
 ### Issue: `apt-get update` Failed After Installation
 
@@ -60,7 +60,7 @@ echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >
 
 > **Note:** The original config used `trixie`, which is the codename for Debian 13 (testing). Use `bookworm` (Debian 12) unless intentionally running a testing branch.
 
-<img height="65%" width="65%" alt="Proxmox Command Line" src="Pictures/05_proxmox_installed.png" />
+<img height="65%" width="65%" alt="Proxmox Command Line" src="Pictures/proxmox_installed.png" />
 
 ---
 
@@ -81,7 +81,7 @@ echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >
 qm set 102 --vga std
 ```
 
-<img height="35%" width="35%" alt="All three VMs in proxmox" src="Pictures/11_all_vms.png" />
+<img height="35%" width="35%" alt="All three VMs in proxmox" src="Pictures/all_vms.png" />
 
 ---
 
@@ -92,7 +92,7 @@ Two VirtIO NICs were added to the Security Onion VM, following Security Onion's 
 - **Management NIC (`ens19`)** — connected to the main Proxmox bridge `vmbr0` for administrative access and internet connectivity. This interface is assigned a static IP.
 - **Monitoring NIC (`ens18`)** — connected to the same bridge in promiscuous mode to passively capture traffic from other VMs. This interface intentionally has no IP address assigned.
 
-<img height="75%" width="75%" alt="Security Onion Setup" src="Pictures/10_security_onion_setup.png" />
+<img height="75%" width="75%" alt="Security Onion Setup" src="Pictures/security_onion_setup.png" />
 
 ### Issue: Installer Warning — IP Routing Mismatch
 
@@ -108,7 +108,7 @@ sudo ip link set ens19 up
 sudo ip route add default via 192.168.x.1
 ```
 
-<img height="75%" width="75%" alt="Security Onion Running" src="Pictures/12_security_onion_running.png" />
+<img height="75%" width="75%" alt="Security Onion Running" src="Pictures/security_onion_running.png" />
 
 ---
 
@@ -150,14 +150,14 @@ curl -kL https://192.168.x.x/
 sudo so-firewall includehost analyst 192.168.x.x
 ```
 
-<img height="75%" width="75%" alt="Adding_to_firewall" src="Pictures/17_adding_to_firewall.png" />
+<img height="75%" width="75%" alt="Adding_to_firewall" src="Pictures/adding_to_firewall.png" />
 
 ### Validation
 
 To confirm the detection pipeline was working end-to-end, a custom Sigma rule was written to detect `nmap` port scans against monitored endpoints. Triggering it with a live `nmap` scan confirmed alerts were firing correctly in the dashboard.
 
 
-<img height="75%" width="75%" alt="Sigma rule" src="Pictures/19_nmap_detection_rule.png" />
+<img height="75%" width="75%" alt="Sigma rule" src="Pictures/nmap_detection_rule.png" />
 
 ---
 
@@ -175,7 +175,7 @@ Elastic Fleet server connectivity can be verified independently:
 curl -k https://192.168.x.x:8220
 ```
 
-<img height="75%" width="75%" alt="Elastic Agent installation on Kali" src="Pictures/15_elastic_agent_install_fail_and_success.png" />
+<img height="75%" width="75%" alt="Elastic Agent installation on Kali" src="Pictures/elastic_agent_install_fail_and_success.png" />
 
 After agents enrolled successfully, hostnames appeared in the Fleet management interface and data began flowing into Security Onion's dashboards.
 
@@ -236,7 +236,7 @@ tailscale up --advertise-routes=192.168.x.0/24
 
 > **Note:** Subnet route advertisement must also be approved in the Tailscale admin console before other nodes will accept the routes.
 
-<img height="75%" width="75%" alt="wireguard node" src="Pictures/18_wireguard_xlc.png" />
+<img height="75%" width="75%" alt="wireguard node" src="Pictures/wireguard_xlc.png" />
 
 - Confirmed that enrolled endpoints could reach internal LAN resources via the advertised routes.
 - Enabled the Tailscale daemon to persist across reboots:
