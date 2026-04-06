@@ -187,7 +187,7 @@ After agents enrolled successfully, hostnames appeared in the Fleet management i
 ## 7. WireGuard VPN Deployment & Secure Configuration
 
 - Installed WireGuard on a Debian LXC container in Proxmox.
-- Configured `wg0.conf` with an internal VPN subnet of `10.0.0.1/24`.
+- Configured `wg0.conf` with an internal VPN subnet of `10.x.x.x/24`.
 - Added preshared keys in each `[Peer]` block for an additional layer of symmetric cryptographic authentication on top of the standard public-key exchange.
 - Applied iptables rules following a least-privilege model — VPN clients are only forwarded to specific internal hosts and ports, with all other traffic rejected:
 
