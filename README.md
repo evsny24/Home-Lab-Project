@@ -47,7 +47,7 @@ ip route
 
 ```bash
 # Comment out or remove the enterprise repo entry:
-\# /etc/apt/sources.list.d/pve-enterprise.list
+# /etc/apt/sources.list.d/pve-enterprise.list
 
 # Add the no-subscription repo
 echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > /etc/apt/sources.list.d/pve-no-sub.list
