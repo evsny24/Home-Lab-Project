@@ -1,4 +1,4 @@
-A running log of setup steps, configurations, and troubleshooting notes for a self-hosted home lab built on Proxmox VE, with Security Onion for network monitoring, WireGuard and Tailscale for remote access, and Wake-on-LAN for remote power management.
+A log of setup steps, configurations, and troubleshooting notes for a self-hosted home lab built on Proxmox VE, with Security Onion for network monitoring, WireGuard and Tailscale for remote access, and Wake-on-LAN for remote power management.
 
 ## Security & Privacy Notice
 
