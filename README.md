@@ -257,7 +257,7 @@ The solution uses a low-power laptop left running on the local network as a rela
 
 - Built a custom PowerShell script on the relay laptop to send the WoL magic packet to the Proxmox host.
 ```powershell
-$MacAddress = "MACADDRESS" # <--- my proxmox mac address
+$MacAddress = "MACADDRESS" # <--- proxmox host mac address
 $MacAddrBytes = $MacAddress -split "[:-]" | ForEach-Object { [Byte] "0x$_" }
 $Packet = [Byte[]] (,0xFF * 6) + ($MacAddrBytes * 16)
 $UDPClient = New-Object System.Net.Sockets.UdpClient
