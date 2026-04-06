@@ -25,6 +25,8 @@ A running log of setup steps, configurations, and troubleshooting notes for a se
 
 > **Note:** Care was taken to avoid overwriting data on the existing primary SSD during this process.
 
+<img height="35%" width="35%" alt="Flashing ISO file" src="Pictures/02_flashing_ISO.PNG" />
+
 ---
 
 ## 2. Proxmox Installation
