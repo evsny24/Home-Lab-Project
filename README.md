@@ -1,5 +1,3 @@
-# Home Lab Build Log
-
 A running log of setup steps, configurations, and troubleshooting notes for a self-hosted home lab built on Proxmox VE, with Security Onion for network monitoring, WireGuard and Tailscale for remote access, and Wake-on-LAN for remote power management.
 
 ---
@@ -25,7 +23,7 @@ A running log of setup steps, configurations, and troubleshooting notes for a se
 
 > **Note:** Care was taken to avoid overwriting data on the existing primary SSD during this process.
 
-<img height="35%" width="35%" alt="Flashing ISO file" src="Pictures/02_flashing_ISO.PNG" />
+<img height="45%" width="45%" alt="Flashing ISO file" src="Pictures/02_flashing_ISO.PNG" />
 
 ---
 
@@ -38,6 +36,8 @@ A running log of setup steps, configurations, and troubleshooting notes for a se
 ip a
 ip route
 ```
+
+<img height="65%" width="65%" alt="Installed Proxmox" src="Pictures/03_welcome_to_proxmox.png" />
 
 ### Issue: `apt-get update` Failed After Installation
 
@@ -54,6 +54,8 @@ echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >
 ```
 
 > **Note:** The original config used `trixie`, which is the codename for Debian 13 (testing). Use `bookworm` (Debian 12) unless intentionally running a testing branch.
+
+<img height="65%" width="65%" alt="Proxmox Command Line" src="Pictures/05_proxmox_installed.png" />
 
 ---
 
@@ -74,6 +76,8 @@ echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >
 qm set 102 --vga std
 ```
 
+<img height="35%" width="35%" alt="All three VMs in proxmox" src="Pictures/11_all_vms.png" />
+
 ---
 
 ## 4. Security Onion & NIC Configuration
@@ -82,6 +86,8 @@ Two VirtIO NICs were added to the Security Onion VM, following Security Onion's 
 
 - **Management NIC (`ens19`)** — connected to the main Proxmox bridge `vmbr0` for administrative access and internet connectivity. This interface is assigned a static IP.
 - **Monitoring NIC (`ens18`)** — connected to the same bridge in promiscuous mode to passively capture traffic from other VMs. This interface intentionally has no IP address assigned.
+
+<img height="75%" width="75%" alt="Security Onion Setup" src="Pictures/10_security_onion_setup.png" />
 
 ### Issue: Installer Warning — IP Routing Mismatch
 
@@ -96,6 +102,8 @@ sudo ip addr add 192.168.x.x/24 dev ens19
 sudo ip link set ens19 up
 sudo ip route add default via 192.168.x.1
 ```
+
+<img height="75%" width="75%" alt="Security Onion Running" src="Pictures/12_security_onion_running.png" />
 
 ---
 
@@ -137,9 +145,14 @@ curl -kL https://192.168.x.x/
 sudo so-firewall includehost analyst 192.168.x.x
 ```
 
+<img height="75%" width="75%" alt="Adding_to_firewall" src="Pictures/17_adding_to_firewall.png" />
+
 ### Validation
 
 To confirm the detection pipeline was working end-to-end, a custom Sigma rule was written to detect `nmap` port scans against monitored endpoints. Triggering it with a live `nmap` scan confirmed alerts were firing correctly in the dashboard.
+
+
+<img height="75%" width="75%" alt="Sigma rule" src="Pictures/19_nmap_detection_rule.png" />
 
 ---
 
@@ -157,9 +170,14 @@ Elastic Fleet server connectivity can be verified independently:
 curl -k https://192.168.x.x:8220
 ```
 
+<img height="75%" width="75%" alt="Elastic Agent installation on Kali" src="Pictures/15_elastic_agent_install_fail_and_success.png" />
+
 After agents enrolled successfully, hostnames appeared in the Fleet management interface and data began flowing into Security Onion's dashboards.
 
+<img height="75%" width="75%" alt="fleet" src="Pictures/16_fleet.png" />
+
 ---
+
 
 ## 7. WireGuard VPN Deployment & Secure Configuration
 
@@ -213,6 +231,8 @@ tailscale up --advertise-routes=192.168.0.0/24
 
 > **Note:** Subnet route advertisement must also be approved in the Tailscale admin console before other nodes will accept the routes.
 
+<img height="75%" width="75%" alt="wireguard node" src="Pictures/18_wireguard_xlc.png" />
+
 - Confirmed that enrolled endpoints could reach internal LAN resources via the advertised routes.
 - Enabled the Tailscale daemon to persist across reboots:
 
@@ -231,6 +251,16 @@ The goal was to be able to fully access and power on the home lab remotely — i
 The solution uses a low-power laptop left running on the local network as a relay. From a remote machine, the workflow is: connect to the laptop over Tailscale via SSH, then send a Wake-on-LAN (WoL) magic packet from the laptop to the Proxmox host's MAC address.
 
 - Built a custom PowerShell script on the relay laptop to send the WoL magic packet to the Proxmox host.
+```powershell
+$MacAddress = "MACADDRESS" # <--- my proxmox mac address
+$MacAddrBytes = $MacAddress -split "[:-]" | ForEach-Object { [Byte] "0x$_" }
+$Packet = [Byte[]] (,0xFF * 6) + ($MacAddrBytes * 16)
+$UDPClient = New-Object System.Net.Sockets.UdpClient
+$UDPClient.Connect(([System.Net.IPAddress]::Broadcast), 9)
+$UDPClient.Send($Packet, $Packet.Length)
+$UDPClient.Close()
+Write-Host "Magic Packet sent to $MacAddress"
+```
 - Made BIOS/UEFI power management adjustments and tuned the NIC using `ethtool` to ensure WoL was functional at the hardware level.
 - All configurations were made persistent via config files rather than runtime commands, and the VPN container was set to start on boot.
 
