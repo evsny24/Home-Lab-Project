@@ -293,7 +293,7 @@ post-up /sbin/ethtool -s eth0 wol g
 **Fix:** Passed `-ExecutionPolicy Bypass` in the remote SSH command to allow the script to run for that session only, without modifying the system-wide execution policy:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\wake.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\wakeupproxmoxhostplaceholdername.ps1
 ```
 
 ### Security Note — No Passwordless SSH
