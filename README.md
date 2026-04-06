@@ -28,7 +28,7 @@ This repository is intended for educational and demonstration purposes only.
 
 > **Note:** Care was taken to avoid overwriting data on the existing primary SSD during this process.
 
-<img height="45%" width="45%" alt="Flashing ISO file" src="Pictures/flashing_ISO.PNG" />
+<img height="45%" width="45%" alt="Flashing ISO file" src="Pictures/flashing_ISO.png" />
 
 ---
 
