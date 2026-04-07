@@ -75,10 +75,10 @@ echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" >
 
 **Cause:** Some display adapter types are incompatible with the noVNC console in certain Proxmox configurations.
 
-**Fix:** Set the display adapter to Standard VGA for the affected VM (replace `102` with the correct VM ID):
+**Fix:** Set the display adapter to Standard VGA for the affected VM.
 
 ```bash
-qm set 102 --vga std
+qm set ID --vga std
 ```
 
 <img height="35%" width="35%" alt="All three VMs in proxmox" src="Pictures/all_vms.png" />
